@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-require_once 'GlyphClient.php';
+require_once '../GlyphClient.php';
 
 function main()
 {
@@ -43,24 +43,45 @@ function runCommands($glf)
     $result = $glf->cmd($cmd);
     print "\n$cmd = $result\n";
 
-    $cmd = "pw::Application getCAESolverNames";
-    $result = $glf->cmd($cmd, "str[]");
-    dumpArray($result, $cmd);
+    //$cmd = "pw::Application getCAESolverNames";
+    //$result = $glf->cmd($cmd, "str[]");
+    //dumpArray($result, $cmd);
 
     $cmd = "pw::Grid getCount";
     $result = $glf->cmd($cmd, "int");
-    print "\n$cmd = $result\n";
+    print "\n$cmd = $result\n\n";
+
+    // static actions are not auto-routed because we don't have a GlyphClient!
+    // Would be nice to figure this out without having to add static methods
+    // to every class in the hierarchy as method($glf, args).
+    //
+    // This experiment tries
+    // where,
+    //
+    // Pointwise\CLASS::ACTION(args) invokes:
+    //    Pointwise\Object::__callStatic(ACTION, $args)
+    //
+    // $glf->CLASS->ACTION(args) invokes the call chain:
+    //    Pointwise\GlyphClient::__get('CLASS')  >returns $glf
+    //    Pointwise\GlyphClient::__call('ACTION', args)
+    print "Entity::getByName('dom-2A') = " . Pointwise\Entity::getByName('dom-2A') ."\n";
+    $glf->Entity->getByName('dom-2B');
 
     //$cmd = "pw::Grid getAll -type pw::Block";
     $cmd = "pw::Grid getAll";
     $ents = $glf->cmd($cmd, "pwent[]");
     //dumpArray($ents, $cmd);
     foreach ($ents as $ent) {
-        $result = $ent->getName();
         print "\n---------------------------------------------------\n";
-        print $ent->getGlyphObj() ." getName = $result\n";
-
-        print "ent = $ent\n";
+        print "$ent getname = " . $ent->getName() ."\n";
+        print "$ent equals $ent = " . $ent->equals($ent) ."\n";
+        print "$ent getType = " . $ent->getType() ."\n";
+        print "$ent isOfType pw::Connector = " . $ent->isOfType('pw::Connector') ."\n";
+        // static actions not working yet :(
+        //Pointwise\Connector::getAdjacentConnectors($ent);
+        print "Pointwise\Connector getAdjacentConnectors $ent = " .
+            Pointwise\Connector($glf, 'getAdjacentConnectors', $ent) ."\n";
+        break;
 
         $result = $ent->getPointCount();
         print $ent->getGlyphObj() ." getPointCount = $result\n";

@@ -1,10 +1,10 @@
 <?php
 namespace Pointwise;
-require_once 'PwBlockStr.php';
-require_once 'PwBlockUns.php';
-require_once 'PwDomainStr.php';
-require_once 'PwDomainUns.php';
-require_once 'PwConnector.php';
+require_once 'phpGlyph/BlockStructured.php';
+require_once 'phpGlyph/BlockUnstructured.php';
+require_once 'phpGlyph/DomainStructured.php';
+require_once 'phpGlyph/DomainUnstructured.php';
+require_once 'phpGlyph/Connector.php';
 
 
 class GlyphClient {
@@ -168,6 +168,21 @@ class GlyphClient {
     }
 
 
+    function __get($name)
+    {
+        echo __METHOD__ ." '$name'\n";
+        return $this;
+    }
+
+
+    function __call($funcName, $args)
+    {
+        echo __METHOD__ ." $funcName {". implode('} {', $args) ."}\n";
+        //return (0 == count($args)) ? $this->cmd("$funcName")
+        //    : $this->cmd("$funcName {". implode('} {', $args) . '}');
+    }
+
+
     private static
     function getCastFunc($castTo, &$castFunc)
     {
@@ -220,19 +235,19 @@ class GlyphClient {
             $payload = null;
         }
         elseif ('BlockUn' == $key) {
-            $payload = new PwBlockUns($client, $payload);
+            $payload = new BlockUnstructured($client, $payload);
         }
         elseif ('BlockSt' == $key) {
-            $payload = new PwBlockStr($client, $payload);
+            $payload = new BlockStructured($client, $payload);
         }
         elseif ('DomainU' == $key) {
-            $payload = new PwDomainUns($client, $payload);
+            $payload = new DomainUnstructured($client, $payload);
         }
         elseif ('DomainS' == $key) {
-            $payload = new PwDomainStr($client, $payload);
+            $payload = new DomainStructured($client, $payload);
         }
         elseif ('Connect' == $key) {
-            $payload = new PwConnector($client, $payload);
+            $payload = new Connector($client, $payload);
         }
         else {
             $payload = null;
