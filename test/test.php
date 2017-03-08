@@ -73,52 +73,62 @@ function runCommands($glf)
     //dumpArray($ents, $cmd);
     foreach ($ents as $ent) {
         print "\n---------------------------------------------------\n";
-        print "$ent getname = " . $ent->getName() ."\n";
         print "$ent equals $ent = " . $ent->equals($ent) ."\n";
         print "$ent getType = " . $ent->getType() ."\n";
         print "$ent isOfType pw::Connector = " . $ent->isOfType('pw::Connector') ."\n";
+
+        print "$ent getname = " . $ent->getName() ."\n";
+        print "$ent getColor = " . $ent->getColor() ."\n";
+        print "$ent getLayer = " . $ent->getLayer() ."\n";
+        print "$ent getExtents = " . $ent->getExtents() ."\n";
+        print "$ent getTimeStamp = " . $ent->getTimeStamp() ."\n";
+        print "$ent getGroups = {" . $ent->getGroups() ."}\n";
+        $attrs = array('ColorMode', 'SecondaryColor', 'SecondaryColorMode',
+            'PointMode', 'FillMode', 'LineMode', 'IsolineCount',
+            'TriangleDensity', 'LineDensity', 'LineWidth');
+        foreach ($attrs as $attr) {
+            print "$ent getRenderAttribute $attr = " . $ent->getRenderAttribute($attr) ."\n";
+        }
+
+        print "$ent getIgnoreAllSources = " . $ent->getIgnoreAllSources() ."\n";
+        print "$ent getSourceCalculationMethod = " . $ent->getSourceCalculationMethod() ."\n";
+        print "$ent getPointCount = " . ($ptCnt = $ent->getPointCount()) ."\n";
+        for ($ndx = 1; $ndx <= $ptCnt; ++$ndx) {
+            print "  $ent getXYZ $ndx = {" . $ent->getXYZ($ndx) ."}\n";
+        }
+        //print "$ent closestCoordinate = " . $ent->closestCoordinate() ."\n";
+        //print "$ent getAutomaticBoundaryCondition = " . $ent->getAutomaticBoundaryCondition() ."\n";
+        //print "$ent getRegisterBoundaryConditions = " . $ent->getRegisterBoundaryConditions() ."\n";
+        print "$ent getVolumeCondition = " . $ent->getVolumeCondition() ."\n";
+        print "$ent getDatabaseEntities = " . $ent->getDatabaseEntities() ."\n";
+        print "$ent getExcludedSources = " . $ent->getExcludedSources() ."\n";
+        print "$ent getSourcePointCount = " . $ent->getSourcePointCount() ."\n";
+        print "$ent getOutOfSyncWithSources = " . $ent->getOutOfSyncWithSources() ."\n";
+        print "$ent getOutOfSyncAttributes = " . $ent->getOutOfSyncAttributes() ."\n";
+        print "$ent canReExtrude = " . $ent->canReExtrude() ."\n";
+        //print "$ent getOversetObjectVisibility = " . $ent->getOversetObjectVisibility() ."\n";
+
+        print "$ent getDimension = " . $ent->getDimension() ."\n";
+        print "$ent getDimensions = " . $ent->getDimensions() ."\n";
+        print "$ent getSegmentCount = " . $ent->getSegmentCount() ."\n";
+        print "$ent getSubConnectorCount = " . $ent->getSubConnectorCount() ."\n";
+        print "$ent getSubConnectorDimension = " . $ent->getSubConnectorDimension() ."\n";
+        print "$ent getDefaultProjectDirection = " . $ent->getDefaultProjectDirection() ."\n";
+        print "$ent getTotalLength = " . $ent->getTotalLength() ."\n";
+        print "$ent getAverageSpacing = " . $ent->getAverageSpacing() ."\n";
+        print "$ent getNode Begin = " . $ent->getNode('Begin') ."\n";
+        print "$ent getCellCount = " . $ent->getCellCount() ."\n";
+
         // static actions not working yet :(
         //Pointwise\Connector::getAdjacentConnectors($ent);
-        print "Pointwise\Connector getAdjacentConnectors $ent = " .
+        print "\nPointwise\Connector getAdjacentConnectors $ent = " .
             Pointwise\Connector($glf, 'getAdjacentConnectors', $ent) ."\n";
+        //?? Pointwise\Connector($glf)->getAdjacentConnectors($ent);
+        //?? $glf->Connector->getAdjacentConnectors($ent);
         break;
-
-        $result = $ent->getPointCount();
-        print $ent->getGlyphObj() ." getPointCount = $result\n";
-        $ptCnt = $result;
-
-        $cmd = 'getXYZ ' . intval($ptCnt / 2);
-        $result = $ent->cmd($cmd, 'double[]');
-        dumpArray($result, $ent->getGlyphObj() .' '. $cmd);
-
-        $result = $ent->getType();
-        print $ent->getGlyphObj() ." getType = $result\n";
-
-        $result = $ent->isOfType('pw::Block');
-        print $ent->getGlyphObj() ." isOfType pw::Block = $result\n";
-
-        $result = $ent->getColor();
-        print $ent->getGlyphObj() ." getColor = $result\n";
-
-        $result = $ent->getLayer();
-        print $ent->getGlyphObj() ." getLayer = $result\n";
-
-        $result = $ent->getExtents();
-        print $ent->getGlyphObj() ." getExtents = $result\n";
-
-        $result = $ent->getTimeStamp();
-        print $ent->getGlyphObj() ." getTimeStamp = $result\n";
-
-        $result = $ent->getRenderAttribute("ColorMode");
-        print $ent->getGlyphObj() ." getRenderAttribute ColorMode = $result\n";
-
-        $result = $ent->getRenderAttribute("TriangleDensity");
-        print $ent->getGlyphObj() ." getRenderAttribute TriangleDensity = $result\n";
-
-        $result = $ent->getGroups();
-        print $ent->getGlyphObj() ." getGroups = $result\n";
     }
 }
+
 
 function doConnect($glfClient, $auth=null, $port=null, $host=null, $retries=null)
 {
