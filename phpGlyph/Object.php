@@ -65,17 +65,28 @@ class Object {
     static
     function __callStatic($funcName, $args)
     {
-        // NEED the GlyphClient connection for this static action!!
-        $bt = debug_backtrace();
-        $cls = $bt[1]['class'];
-        if (0 == strncmp($cls, 'Pointwise\\', 10)) {
-            $cls = 'pw::' . substr($cls, 10);
-            echo __METHOD__ ." $cls $funcName {". implode('} {', $args) ."}\n";
-            return "$cls $funcName {". implode('} {', $args) ."}";
+        $argCnt = count($args);
+        if ((0 < $argCnt) && is_a($args[0], 'Pointwise\GlyphClient')) {
+            $glf = $args[0];
+            $args = array_slice($args, 1);
+            --$argCnt;
         }
-        //var_dump($bt);
-        //return $this->cmd("$funcName ". implode(' ', $args));
-        return __METHOD__ .'UNKNOWN';
+        elseif (!GlyphClient::getDefaultClient($glf)) {
+            throw new \Exception("Default GlyphClient not defined");
+        }
+
+        $cls = get_called_class();
+        if (0 != strncmp($cls, 'Pointwise\\', 10)) {
+            // bad
+        }
+        else {
+            $cls = 'pw::' . substr($cls, 10);
+            $cmd = "$cls $funcName ". GlyphClient::tclImplode($args);
+            //$cmd = "$cls $funcName". (0 == $argCnt ? "" : ' '.GlyphClient::tclImplode($args));
+            //echo __METHOD__ ."# $cmd\n";
+            return $glf->cmd($cmd);
+        }
+        throw new \Exception("Unexpected class '$cls'");
     }
 
 

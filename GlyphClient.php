@@ -1,24 +1,25 @@
 <?php
 namespace Pointwise;
-require_once 'phpGlyph/BlockStructured.php';
-require_once 'phpGlyph/BlockUnstructured.php';
-require_once 'phpGlyph/DomainStructured.php';
-require_once 'phpGlyph/DomainUnstructured.php';
-require_once 'phpGlyph/Connector.php';
-
 
 class GlyphClient {
+    private static $defaultClient_ = null;
     private $debug_ = false;
     private $busy_ = false;
     private $auth_failed_;
     private $socket_;
+    private $errors_;
 
 
     function __construct() {
         $this->in(__METHOD__, func_get_args());
+        if (null === self::$defaultClient_) {
+            self::$defaultClient_ = $this;
+        }
         $this->busy_ = false;
         $this->auth_failed_ = false;
         $this->socket_ = false;
+        $this->clearErrors();
+        spl_autoload_register(array(__NAMESPACE__ .'\\GlyphClient', 'autoLoader'));
     }
 
 
@@ -28,39 +29,36 @@ class GlyphClient {
     }
 
 
-    function connect($port=null, $auth=null, $host=null, $retries=null) {
+    function connect($port=null, $auth=null, $host=null, $retries=null, $retrySeconds=null) {
         $this->in(__METHOD__, func_get_args());
         $this->resolveSetting($port, 'PWI_GLYPH_SERVER_PORT', 2807);
         $this->resolveSetting($auth, 'PWI_GLYPH_SERVER_AUTH', '');
         $this->resolveSetting($host, 'PWI_GLYPH_SERVER_HOST', 'localhost');
         $this->resolveSetting($retries, 'PWI_GLYPH_SERVER_RETRIES', 5);
+        $this->resolveSetting($retrySeconds, 'PWI_GLYPH_SERVER_RETRYDELAY', 0.1); // seconds
         $host2 = gethostbyname($host);
         $this->debug("CONNECT(port=$port, auth='$auth', host='$host($host2)', ".
-                     "retries='$retries')\n");
+                     "retries='$retries')");
         $this->disconnect();
+        $this->clearErrors();
         $ret = false;
-        $this->socket_ = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-        if (false === $this->socket_) {
-            // bad
-            print "socket_create failed\n";
-        }
-        elseif (!socket_connect($this->socket_, $host2, $port)) {
+        if (!$this->doConnect($host2, $port, $retries, $retrySeconds)) {
             $this->disconnect();
-            print "socket_connect(\$socket_, '$host2', $port) failed\n";
+            $this->pushError("socket_connect(\$socket_, '$host2', $port) failed");
         }
         elseif (!$this->send('AUTH', $auth)) {
             $this->disconnect();
-            print "AUTH failed\n";
+            $this->pushError("AUTH failed");
         }
         elseif (!$this->recv($type, $payload)) {
             $this->disconnect();
-            print "connect::recv failed\n";
+            $this->pushError("connect::recv failed");
         }
         elseif ('READY' != $type) {
             $this->auth_failed_ = ($type == 'AUTHFAIL');
             $this->busy_ = ($type == 'BUSY');
             $this->disconnect();
-            print "Not READY ($type)\n";
+            $this->pushError("Not READY ($type)");
         }
         else {
             $ret = true;
@@ -71,26 +69,25 @@ class GlyphClient {
 
     function cmd($c, $castTo=null) {
         $this->in(__METHOD__, func_get_args());
+        $this->clearErrors();
         $payload = null;
-        if (false !== $this->socket_) {
-            if (!$this->send('EVAL', $c)) {
-                $this->disconnect();
-                print "EVAL '$c' failed\n";
-            }
-            elseif (!$this->recv($type, $payload)) {
-                $this->disconnect();
-                print "cmd::recv failed\n";
-            }
-            elseif ('' == $type) {
-                $this->disconnect();
-            }
-            elseif ('OK' != $type) {
-                trigger_error("Glyph '$c' failed with $payload", E_USER_NOTICE);
-                $payload = null;
-            }
-            elseif (null !== $castTo && null !== $payload) {
-                $this->doCast($castTo, $payload);
-            }
+        if (false === $this->socket_) {
+            throw new \Exception("The client is not connected to a Glyph Server for command '$c'");
+        }
+        elseif (!$this->send('EVAL', $c)) {
+            $this->disconnect();
+            throw new \Exception("Could not send command '$c'");
+        }
+        elseif (!$this->recv($type, $payload)) {
+            $this->disconnect();
+            throw new \Exception("No response from the Glyph Server for command '$c'");
+        }
+        elseif ('OK' != $type) {
+            throw new \Exception("Command '$c' failed with:\n$payload");
+            $payload = null;
+        }
+        elseif (null !== $castTo && null !== $payload) {
+            $payload = $this->doCast($castTo, $payload);
         }
         return $payload;
     }
@@ -123,9 +120,10 @@ class GlyphClient {
     }
 
 
-    function doCast($castTo, &$payload)
+    function doCast($castTo, $payload)
     {
         $this->in(__METHOD__, func_get_args());
+        $castTo = str_replace(' ', '', $castTo);
         if ('[]' == substr($castTo, -2)) {
             $castTo = trim(substr($castTo, 0, -2));
             $isArray = true;
@@ -133,18 +131,23 @@ class GlyphClient {
         else {
             $isArray = false;
         }
+        $ret = null;
         if (!GlyphClient::getCastFunc($castTo, $castFunc)) {
             // could not find a callable cast function
-            if (is_callable("Pointwise\GlyphClient::unknownCast_", false, $castFunc)) {
-                call_user_func($castFunc, $client, $castTo, $payload, $isArray);
+            if (is_callable(__NAMESPACE__."\GlyphClient::unknownCast_", false, $castFunc)) {
+                $ret = call_user_func($castFunc, $client, $castTo, $payload, $isArray);
             }
         }
         elseif ($isArray) {
-            $this->arrayCast_($castFunc, $payload);
+            $ret = $this->arrayCast_($castFunc, $payload);
         }
         else {
-            $payload = call_user_func($castFunc, $this, $payload);
+            $ret = call_user_func($castFunc, $this, $payload);
         }
+        if (null === $ret) {
+            throw new \Exception("Invalid cast $castTo($payload)");
+        }
+        return $ret;
     }
 
 
@@ -154,10 +157,29 @@ class GlyphClient {
     }
 
 
-    function debug($msg)
+    function debug($msg, $newline=true)
     {
         if ($this->debug_) {
-            print '   | ' . $msg;
+            print '   | ' . $msg . ($newline ? "\n" : "");
+        }
+    }
+
+
+    function hasErrors()
+    {
+        return 0 < count($this->errors_);
+    }
+
+
+    function printErrors()
+    {
+        if (0 < count($this->errors_)) {
+            foreach ($this->errors_ as $msg) {
+                print "$msg\n";
+            }
+        }
+        else {
+            print "No errors\n";
         }
     }
 
@@ -168,58 +190,99 @@ class GlyphClient {
     }
 
 
-    function __get($name)
+    public static
+    function tclImplode($arr)
     {
-        echo __METHOD__ ." '$name'\n";
-        return $this;
+        //print "in ". __METHOD__ ."('". implode('|', $arr) ."')\n";
+        // Convert $arr to a Tcl list string wrapping multiword values in {}
+        $cnt = count($arr);
+        for ($i = 0; $i < $cnt; ++$i) {
+            //print "  ## '$i: $arr[$i]' pos=". strpos($arr[$i], ' ') ."\n";
+            if (false !== strpos($arr[$i], ' ')) {
+                $arr[$i] = '{'. $arr[$i] .'}';
+            }
+        }
+        //print "  ## result ('". implode(' ', $arr) ."')\n";
+        return implode(' ', $arr);
     }
 
 
-    function __call($funcName, $args)
+    public static
+    function tclExplode($tclListStr)
     {
-        echo __METHOD__ ." $funcName {". implode('} {', $args) ."}\n";
-        //return (0 == count($args)) ? $this->cmd("$funcName")
-        //    : $this->cmd("$funcName {". implode('} {', $args) . '}');
-    }
-
-
-    private static
-    function getCastFunc($castTo, &$castFunc)
-    {
-        return is_callable("Pointwise\GlyphClient::{$castTo}Cast", false, $castFunc);
-    }
-
-
-    private
-    function arrayCast_($castFunc, &$payload)
-    {
+        //print "in ". __METHOD__ ."('$tclListStr')\n";
         // tokenizes a Tcl list string allowing for nested {}.
         // for example,
         //   "word {two words} final"
         // is split into 3 tokens,
         //   "word", "two words", and "final"
-        preg_match_all("/{([^{]+)}|(\S+)/", $payload, $matches, PREG_SET_ORDER);
-        $payload = array();
+        // TODO: Does not handle escaped { } chars
+        preg_match_all("/{([^{]+)}|(\S+)/", $tclListStr, $matches, PREG_SET_ORDER);
+        $ret = array();
         foreach ($matches as $match) {
             // $match is itself an array of 2 or 3 items.
             //   $match[0] = full match. e.g. "word" or "{two words}"
             //   $match[1] = empty or match sans {}. e.g. "two words"
             //   $match[2] = undefined or "word"
-            // attempt to cast each matched token string using $castFunc
-            // last item in match[] is the one we want to cast
-            $tmp = call_user_func($castFunc, $this, $match[count($match) - 1]);
-            if (null !== $tmp) {
-                // cast worked - keep it
-                $payload[] = $tmp;
+            // last item in match[] is the one we want
+            $ret[] = $match[count($match) - 1];
+        }
+        //var_dump($ret);
+        return $ret;
+    }
+
+
+    public static
+    function getDefaultClient(&$glf) {
+        $glf = self::$defaultClient_;
+        return null !== $glf;
+    }
+
+
+    private static
+    function autoLoader($className) {
+        //print "in ". __METHOD__ ."('$className')\n";
+        //debug_print_backtrace();
+        if (0 == strncmp($className, __NAMESPACE__.'\\', 10)) {
+            $inc = realpath(__DIR__.'/phpGlyph/'. substr($className, 10) .'.php');
+            if (file_exists($inc)) {
+                //print __METHOD__ ."('$inc')\n";
+                require_once $inc;
             }
         }
     }
 
 
     private static
-    function unknownCast_($castTo, &$payload, $isArray)
+    function getCastFunc($castTo, &$castFunc)
+    {
+        return is_callable(__NAMESPACE__."\GlyphClient::{$castTo}Cast", false, $castFunc);
+    }
+
+
+    private
+    function arrayCast_($castFunc, $payload)
+    {
+        // $payload is a Tcl list as a string
+        $ret = array();
+        foreach (GlyphClient::tclExplode($payload) as $item) {
+            $tmp = call_user_func($castFunc, $this, $item);
+            if (null === $tmp) {
+                // cast failed - fatal
+                $ret = null;
+                break;
+            }
+            $ret[] = $tmp;
+        }
+        return $ret;
+    }
+
+
+    private static
+    function unknownCast_($castTo, $payload, $isArray)
     {
         print "   | unknownCast_(castTo=$castTo, payload=$payload, isArray=$isArray)\n";
+        return null;
     }
 
 
@@ -227,32 +290,86 @@ class GlyphClient {
     function pwentCast($client, $payload)
     {
         // expecting $payload == 'pw::EntType_n'
-        $key = substr($payload, 6, 7);
         if (null === $client) {
             $payload = null;
         }
         elseif ('::pw::' !== substr($payload, 0, 6)) {
             $payload = null;
         }
-        elseif ('BlockUn' == $key) {
-            $payload = new BlockUnstructured($client, $payload);
-        }
-        elseif ('BlockSt' == $key) {
-            $payload = new BlockStructured($client, $payload);
-        }
-        elseif ('DomainU' == $key) {
-            $payload = new DomainUnstructured($client, $payload);
-        }
-        elseif ('DomainS' == $key) {
-            $payload = new DomainStructured($client, $payload);
-        }
-        elseif ('Connect' == $key) {
-            $payload = new Connector($client, $payload);
-        }
         else {
-            $payload = null;
+            // explode EntType_n
+            list($cls, $id) = explode('_', substr($payload, 6), 2);
+            $cls = __NAMESPACE__.'\\'.$cls;
+            if (class_exists($cls)) {
+                $payload = new $cls($client, $payload);
+            }
+            else {
+                $payload = null;
+            }
         }
         return $payload;
+    }
+
+
+    private static
+    function numericNCaster($client, $payload, $cnt, $func)
+    {
+        //print "in ". __METHOD__."($client, '$payload', $cnt, $func)\n";
+        // expecting "numeric numeric ... numeric" of length $cnt
+        $ret = explode(' ', $payload);
+        if ($cnt != count($ret)) {
+            $ret = null;
+        }
+        else {
+            for($i = 0; $i < $cnt; ++$i) {
+                if (!is_numeric($ret[$i])) {
+                    $ret = null;
+                    break;
+                }
+                $ret[$i] = $func($ret[$i]);
+            }
+        }
+        return $ret;
+    }
+
+
+    private static
+    function vec3Cast($client, $payload)
+    {
+        // expecting "float float float"
+        return GlyphClient::numericNCaster($client, $payload, 3, 'doubleval');
+    }
+
+
+    private static
+    function vec2Cast($client, $payload)
+    {
+        // expecting "float float"
+        return GlyphClient::numericNCaster($client, $payload, 2, 'doubleval');
+    }
+
+
+    private static
+    function uvCast($client, $payload)
+    {
+        // expecting "float float"
+        return GlyphClient::numericNCaster($client, $payload, 2, 'doubleval');
+    }
+
+
+    private static
+    function idx3Cast($client, $payload)
+    {
+        // expecting "int int int"
+        return GlyphClient::numericNCaster($client, $payload, 3, 'intval');
+    }
+
+
+    private static
+    function idx2Cast($client, $payload)
+    {
+        // expecting "int int"
+        return GlyphClient::numericNCaster($client, $payload, 2, 'intval');
     }
 
 
@@ -299,12 +416,50 @@ class GlyphClient {
 
 
     private
+    function pushError($msg)
+    {
+        if (0 < strlen($msg)) {
+            $this->errors_[] = $msg;
+        }
+    }
+
+
+    private
+    function clearErrors()
+    {
+        $this->errors_ = array();
+    }
+
+
+    private
+    function doConnect($host, $port, $retries, $retrySeconds)
+    {
+        $ret = false;
+        $this->socket_ = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        if (false === $this->socket_) {
+            $this->pushError("socket_create failed");
+        }
+        else {
+            $usecDelay = (int)($retrySeconds * 1000000.0);
+            $ret = @socket_connect($this->socket_, $host, $port);
+            while (!$ret && ($retries > 0) && ($usecDelay > 0)) {
+                $this->debug("retry $retries (delay $retrySeconds sec, $usecDelay usec)");
+                --$retries;
+                usleep($usecDelay);
+                $ret = @socket_connect($this->socket_, $host, $port);
+            }
+        }
+        return $ret;
+    }
+
+
+    private
     function send($type, $payload)
     {
         $this->in(__METHOD__, func_get_args());
         $data = sprintf('%-8s%s', $type, $payload);
         $len =  pack('N', strlen($data));
-        $this->debug(sprintf("send: %u[%s]\n",
+        $this->debug(sprintf("send: %u[%s]",
             base_convert(bin2hex($len), 16, 10), $data));
         return (4 == socket_write($this->socket_, $len, 4)) &&
           (strlen($data) == socket_write($this->socket_, $data));
@@ -321,7 +476,7 @@ class GlyphClient {
             return false;
         }
         $data = socket_read($this->socket_, $len);
-        $this->debug(sprintf("recv: %u[%s]\n", $len, $data));
+        $this->debug(sprintf("recv: %u[%s]", $len, $data));
         if (strlen($data) < 8) {
             return false;
         }
@@ -346,7 +501,7 @@ class GlyphClient {
             }
             $locArgs[] = $arg;
         }
-        $this->debug("$method('" . implode("', '", $locArgs) . "')\n");
+        $this->debug("$method('" . implode("', '", $locArgs) . "')");
     }
 }
 
