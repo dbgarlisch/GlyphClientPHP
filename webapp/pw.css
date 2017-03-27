@@ -1,0 +1,79 @@
+#app {
+    margin: 0.5em;
+    padding: 0.2em;
+    max-width: 800px;
+    vertical-align: top;
+    border: 0px solid yellow;
+}
+
+#menu {
+    list-style-type: none;
+    margin: 0;
+    float: left;
+    width: 200px;
+    max-width: 200px;
+    padding: 0.2em;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    border: 0px solid red;
+}
+
+#menu li {
+    padding: 0.3em 0.5em;
+    cursor: pointer;
+    border: 1px dotted white;
+}
+
+#menu li,
+#menu li select {
+    font-weight: bold;
+    font-size: inherit;
+}
+
+#menu li:hover {
+    color: blue;
+    border: 1px dotted blue;
+}
+
+#display_panel {
+    float: left;
+    padding: 0.5em;
+    border-left: 1px solid #ccc;
+}
+
+#DISPLAY {
+    margin: 0;
+    padding: 0;
+    border: 0px solid blue;
+    cursor: crosshair;
+}
+
+.buttonBar {
+    padding: 0.3em 0.5em;
+    text-align: center;
+}
+
+#status_bar {
+    padding: 0.3em 0.5em;
+    height: 1.6em;
+    border: 1px solid #ccc;
+}
+
+#mouse_xy {
+    float: right;
+}
+
+#log_panel {
+    padding: 0em;
+    border: 1px solid #ccc;
+}
+
+#log {
+    width: 100%;
+    overflow: scroll;
+    height: 150px;
+    max-height: 150px;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid #ccc;
+}

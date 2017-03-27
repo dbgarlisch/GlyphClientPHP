@@ -289,7 +289,7 @@ class GlyphClient {
     private static
     function pwentCast($client, $payload)
     {
-        // expecting $payload == 'pw::EntType_n'
+        // expecting $payload == '::pw::EntType_n'
         if (null === $client) {
             $payload = null;
         }
