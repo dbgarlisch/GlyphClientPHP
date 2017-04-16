@@ -9,8 +9,9 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 require_once 'GlyphClient.php';
+use Pointwise as pw; // make pw an alias for the Pointwise namespace
 
-$glf = new Pointwise\GlyphClient();
+$glf = new pw\GlyphClient();
 if ($glf->connect()) {
     $result = $glf->cmd("pw::Application getVersion");
     print "Pointwise version is " . $result . "\n";
