@@ -3,6 +3,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 require_once '../GlyphClient.php';
+use Pointwise as pw;
 
 
 function main()
@@ -21,7 +22,7 @@ function main()
         print "\n";
     }
 
-    $glf = new Pointwise\GlyphClient();
+    $glf = new pw\GlyphClient();
     $glf->setDebug($debug);
 
     if ($glf->connect($port, $auth, $host, $retries, $retrySeconds)) {
@@ -43,24 +44,24 @@ function main()
 
 function runCommands($glf)
 {
-    print "Application getVersion = " . Pointwise\Application::getVersion() ."\n";
-    print "Application getCAESolverNames = " . Pointwise\Application::getCAESolverNames() ."\n";
-    print "Application getCAESolver = " . Pointwise\Application::getCAESolver() ."\n";
-    print "Application setCAESolver 'ADS/Leo (structured)' = " . Pointwise\Application::setCAESolver('{ADS/Leo (structured)}') ."\n";
-    print "Application getCAESolver = " . Pointwise\Application::getCAESolver() ."\n";
-    print "Application undo = " . Pointwise\Application::undo() ."\n";
-    print "Application getCAESolver = " . Pointwise\Application::getCAESolver() ."\n";
+    print "Application getVersion = " . pw\Application::getVersion() ."\n";
+    print "Application getCAESolverNames = " . pw\Application::getCAESolverNames() ."\n";
+    print "Application getCAESolver = " . pw\Application::getCAESolver() ."\n";
+    print "Application setCAESolver 'ADS/Leo (structured)' = " . pw\Application::setCAESolver('{ADS/Leo (structured)}') ."\n";
+    print "Application getCAESolver = " . pw\Application::getCAESolver() ."\n";
+    print "Application undo = " . pw\Application::undo() ."\n";
+    print "Application getCAESolver = " . pw\Application::getCAESolver() ."\n";
     print "\n";
 
-    print "Database getCount = " . Pointwise\Database::getCount() ."\n";
-    print "Database getExtents = " . Pointwise\Database::getExtents() ."\n";
+    print "Database getCount = " . pw\Database::getCount() ."\n";
+    print "Database getExtents = " . pw\Database::getExtents() ."\n";
     print "\n";
 
-    print "Grid getCount = " . Pointwise\Grid::getCount() ."\n";
-    print "Grid getAll -type pw::Block = ". Pointwise\Grid::getAll('-type pw::Block') ."\n";
-    print "Grid getAll -type pw::Domain = ". Pointwise\Grid::getAll('-type pw::Domain') ."\n";
-    print "Grid getAll -type pw::Connector = ". Pointwise\Grid::getAll('-type pw::Connector') ."\n";
-    print "Grid getAll = " . ($ents = Pointwise\Grid::getAll()) ."\n";
+    print "Grid getCount = " . pw\Grid::getCount() ."\n";
+    print "Grid getAll -type pw::Block = ". pw\Grid::getAll('-type pw::Block') ."\n";
+    print "Grid getAll -type pw::Domain = ". pw\Grid::getAll('-type pw::Domain') ."\n";
+    print "Grid getAll -type pw::Connector = ". pw\Grid::getAll('-type pw::Connector') ."\n";
+    print "Grid getAll = " . ($ents = pw\Grid::getAll()) ."\n";
     print "\n";
 
     foreach ($glf->doCast("pwent[]", $ents) as $ent) {
@@ -118,7 +119,7 @@ function runCommands($glf)
             print "$node getXYZ = {$xyz}\n";
             $xyz = $glf->doCast('vec3', $xyz);
             var_dump($xyz);
-            print "\nPointwise\Connector::getAdjacentConnectors($glf, $ent) = ". Pointwise\Connector::getAdjacentConnectors($glf, $ent) ."\n";
+            print "\npw\Connector::getAdjacentConnectors($glf, $ent) = ". pw\Connector::getAdjacentConnectors($glf, $ent) ."\n";
         }
         if (!$ent->isOfType('pw::Block')) {
             print "$ent getDefaultProjectDirection = " . $ent->getDefaultProjectDirection() ."\n";
@@ -128,9 +129,9 @@ function runCommands($glf)
 
     print "\nSTATIC ACTION TESTS\n";
     print "\n";
-    print "Entity::getByName('dom-1') = " . Pointwise\Entity::getByName('dom-1') ."\n";
+    print "Entity::getByName('dom-1') = " . pw\Entity::getByName('dom-1') ."\n";
     print "\n";
-    print "GridEntity::getByName('dom-2') = " . Pointwise\GridEntity::getByName('dom-2') ."\n";
+    print "GridEntity::getByName('dom-2') = " . pw\GridEntity::getByName('dom-2') ."\n";
     print "\n";
 
     var_dump($glf->doCast('vec3', '1.5 2.6 3.7'));
@@ -138,7 +139,7 @@ function runCommands($glf)
     var_dump($glf->doCast('uv', '0.55 0.77'));
     var_dump($glf->doCast('idx3', '1 2 3'));
     var_dump($glf->doCast('idx2', '1 2'));
-    var_dump(Pointwise\GlyphClient::tclImplode(array('word', 'multi word', 'word2')));
+    var_dump(pw\GlyphClient::tclImplode(array('word', 'multi word', 'word2')));
 }
 
 
