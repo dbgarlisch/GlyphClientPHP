@@ -67,7 +67,7 @@ function runCommands($glf)
     print "Application getVersion = " . Pointwise\Application::getVersion() ."\n";
     print "Application getCAESolverNames = " . Pointwise\Application::getCAESolverNames() ."\n";
     print "Application getCAESolver = " . Pointwise\Application::getCAESolver() ."\n";
-    print "Application setCAESolver 'ADS/Leo (structured)' = " . Pointwise\Application::setCAESolver('ADS/Leo (structured)') ."\n";
+    print "Application setCAESolver 'ADS/Leo (structured)' = " . Pointwise\Application::setCAESolver('{ADS/Leo (structured)}') ."\n";
     print "Application getCAESolver = " . Pointwise\Application::getCAESolver() ."\n";
     print "Application undo = " . Pointwise\Application::undo() ."\n";
     print "Application getCAESolver = " . Pointwise\Application::getCAESolver() ."\n";
@@ -78,9 +78,9 @@ function runCommands($glf)
     print "\n";
 
     print "Grid getCount = " . Pointwise\Grid::getCount() ."\n";
-    print "Grid getAll -type pw::Block = ". Pointwise\Grid::getAll('-type',  'pw::Block') ."\n";
-    print "Grid getAll -type pw::Domain = ". Pointwise\Grid::getAll('-type',  'pw::Domain') ."\n";
-    print "Grid getAll -type pw::Connector = ". Pointwise\Grid::getAll('-type',  'pw::Connector') ."\n";
+    print "Grid getAll -type pw::Block = ". Pointwise\Grid::getAll('-type pw::Block') ."\n";
+    print "Grid getAll -type pw::Domain = ". Pointwise\Grid::getAll('-type pw::Domain') ."\n";
+    print "Grid getAll -type pw::Connector = ". Pointwise\Grid::getAll('-type pw::Connector') ."\n";
     print "Grid getAll = " . ($ents = Pointwise\Grid::getAll()) ."\n";
     print "\n";
 
@@ -133,13 +133,17 @@ function runCommands($glf)
             print "$ent getSubConnectorDimension = " . $ent->getSubConnectorDimension() ."\n";
             print "$ent getTotalLength = " . $ent->getTotalLength() ."\n";
             print "$ent getAverageSpacing = " . $ent->getAverageSpacing() ."\n";
-            print "$ent getNode Begin = " . $ent->getNode('Begin') ."\n";
-            print "\nPointwise\Connector::getAdjacentConnectors($ent) = ". Pointwise\Connector::getAdjacentConnectors($ent) ."\n";
+            $node = $glf->doCast("pwent", $ent->getNode('Begin'));
+            print "$ent getNode Begin = $node\n";
+            $xyz = $node->getXYZ();
+            print "$node getXYZ = {$xyz}\n";
+            $xyz = $glf->doCast('vec3', $xyz);
+            var_dump($xyz);
+            print "\nPointwise\Connector::getAdjacentConnectors($glf, $ent) = ". Pointwise\Connector::getAdjacentConnectors($glf, $ent) ."\n";
         }
         if (!$ent->isOfType('pw::Block')) {
             print "$ent getDefaultProjectDirection = " . $ent->getDefaultProjectDirection() ."\n";
         }
-
         break;
     }
 

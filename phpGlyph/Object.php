@@ -31,8 +31,11 @@ class Object {
 
     function __toString()
     {
+        // This is invoked anytime a string rep of the Object is needed.
+        // When composing glyph commands, the auto command dispatching depends
+        // on this to return the underlying glyph object function name.
+        //print "   #   ". __CLASS__ ."\__toString::glfObj_(". $this->glfObj_ .")\n";
         return $this->glfObj_;
-        //return __CLASS__ . "(obj=". $this->glfObj_ .")";
     }
 
 
@@ -55,19 +58,55 @@ class Object {
     }
 
 
+    static
+    function argsToStr($args)
+    {
+        $argCnt = count($args);
+        if (0 == $argCnt) {
+            return '';
+        }
+        else if ((1 < $argCnt) || is_object($args[0])) {
+            return ' '. GlyphClient::tclImplode($args);
+        }
+        // Return single arg without modification. Caller is responsible to make
+        // the arg Tcl compliant. Multi word values must be // enclosed in {}.
+        // For example, "-flag {multi word value}"
+        return ' '. trim($args[0]);
+    }
+
+
     function __call($funcName, $args)
     {
-        return (0 == count($args)) ? $this->cmd("$funcName")
-            : $this->cmd("$funcName {". implode('} {', $args) . '}');
+        // An undefined PHP object method was called somewhere in this object's
+        // subclass hierarchy. Map the call to a glyph object and execute it.
+        // If a subclass object needs to do special processing for an action,
+        // the PHP subclass must implement the method. See subclass impl in
+        // folder phpGlyph/CLASS.php. These subclasses are autoloaded by
+        // GlyphClient::autoLoader($className).
+
+        // exec glyph object command:
+        //   "$funcName[ arg ...]"
+        return $this->cmd("$funcName". Object::argsToStr($args));
     }
 
 
     static
     function __callStatic($funcName, $args)
     {
+        // An undefined PHP static method was called somewhere in this class'
+        // subclass hierarchy. Map the call to a glyph class and execute it.
+        // If a subclass needs to do special processing for an action, the
+        // PHP subclass must implement the static method. See subclass impl in
+        // directory "phpGlyph/CLASS.php". These subclasses are autoloaded by
+        // GlyphClient::autoLoader($className).
+
+        // expecting:
+        //   $funcName [$glfClient] [arg ...]
         $argCnt = count($args);
         if ((0 < $argCnt) && is_a($args[0], 'Pointwise\GlyphClient')) {
+            // caller provided glfClient
             $glf = $args[0];
+            // remove glfClient from args
             $args = array_slice($args, 1);
             --$argCnt;
         }
@@ -77,14 +116,12 @@ class Object {
 
         $cls = get_called_class();
         if (0 != strncmp($cls, 'Pointwise\\', 10)) {
-            // bad
+            throw new \Exception("Expected 'Pointwise\CLASS' got '$cls'");
         }
         else {
-            $cls = 'pw::' . substr($cls, 10);
-            $cmd = "$cls $funcName ". GlyphClient::tclImplode($args);
-            //$cmd = "$cls $funcName". (0 == $argCnt ? "" : ' '.GlyphClient::tclImplode($args));
-            //echo __METHOD__ ."# $cmd\n";
-            return $glf->cmd($cmd);
+            // map PHP class to glyph object type
+            //   Pointwise\CLASS --> pw::CLASS
+            return $glf->cmd('pw::'. substr($cls, 10). " $funcName". Object::argsToStr($args));
         }
         throw new \Exception("Unexpected class '$cls'");
     }
