@@ -41,27 +41,6 @@ function main()
 }
 
 
-function runCommandsX($glf)
-{
-    $center = '0 0 0';
-    $radius = 1.0;
-    $normal='0 0 1';
-
-    //$glf->setDebug(1);
-    $seg = $glf->doCast("pwent", Pointwise\SegmentCircle::create());
-    $xyz = explode(' ', $center);
-    $xyz[0] = doubleval($xyz[0]) + $radius;
-    $pt = implode(' ', $xyz);
-    $seg->addPoint($pt);
-    $seg->addPoint($center);
-    //$seg->setCenterPoint($center, $normal);
-    $seg->setEndAngle(360, '0 0 1');
-    $con = $glf->doCast("pwent", Pointwise\Connector::create());
-    $con->addSegment($seg);
-    $con->calculateDimension();
-}
-
-
 function runCommands($glf)
 {
     print "Application getVersion = " . Pointwise\Application::getVersion() ."\n";

@@ -83,6 +83,10 @@ class Object {
         // the PHP subclass must implement the method. See subclass impl in
         // folder phpGlyph/CLASS.php. These subclasses are autoloaded by
         // GlyphClient::autoLoader($className).
+        // For example The PHP call to
+        //   $ent->getRenderAttribute('ColorMode')
+        // maps to the glyph call
+        //   ::pw::Connector_1 getRenderAttribute ColorMode
 
         // exec glyph object command:
         //   "$funcName[ arg ...]"
@@ -99,6 +103,10 @@ class Object {
         // PHP subclass must implement the static method. See subclass impl in
         // directory "phpGlyph/CLASS.php". These subclasses are autoloaded by
         // GlyphClient::autoLoader($className).
+        // For example The PHP call to
+        //   Pointwise\Grid::getCount()
+        // maps to the glyph call
+        //   pw::Grid getCount
 
         // expecting:
         //   $funcName [$glfClient] [arg ...]
