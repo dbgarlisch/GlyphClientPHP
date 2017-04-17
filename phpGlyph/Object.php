@@ -2,16 +2,20 @@
 namespace Pointwise;
 
 class Object {
-    protected $client_; // the controlling glyph client
-    protected $glfObj_; // tcl/Glyph object function name
+    protected       $client_; // the controlling glyph client
+    protected       $glfObj_; // tcl/Glyph object function name
+    private static  $retTypes_ = array();
 
-    function __construct($client, $obj) {
+
+    function __construct($client, $obj)
+    {
         $this->client_ = $client;
         $this->glfObj_ = $obj;
     }
 
 
-    function __destruct() {
+    function __destruct()
+    {
         $this->client_ = null;
         $this->glfObj_ = null;
     }
@@ -90,7 +94,8 @@ class Object {
 
         // exec glyph object command:
         //   "$funcName[ arg ...]"
-        return $this->cmd("$funcName". Object::argsToStr($args));
+        return $this->cmd("$funcName". Object::argsToStr($args),
+            self::getInstanceMethodRetType(get_called_class(), $funcName));
     }
 
 
@@ -127,11 +132,82 @@ class Object {
             throw new \Exception("Expected 'Pointwise\CLASS' got '$cls'");
         }
         else {
+            $castTo = self::getStaticMethodRetType($cls, $funcName);
             // map PHP class to glyph object type
             //   Pointwise\CLASS --> pw::CLASS
-            return $glf->cmd('pw::'. substr($cls, 10). " $funcName". Object::argsToStr($args));
+            return $glf->cmd('pw::'. substr($cls, 10).
+                " $funcName". Object::argsToStr($args), $castTo);
         }
         throw new \Exception("Unexpected class '$cls'");
+    }
+
+
+    static
+    function getMethodRetType($sep, $cls, $methodName)
+    {
+        $key = "$cls$sep$methodName";
+        if (!array_key_exists($key, self::$retTypes_)) {
+            print "  @@@@ NOT FOUND $key\n";
+            // assume rturn type not defined in parent classes
+            self::$retTypes_[$key] = null;
+            $cls = get_parent_class($cls);
+            while (false !== $cls) {
+                $parentKey = "$cls$sep$methodName";
+                if (array_key_exists($parentKey, self::$retTypes_)) {
+                    // store return type for $origKey so we don't have to
+                    // search again
+                    self::$retTypes_[$key] = self::$retTypes_[$parentKey];
+                    print "  @@@@ MAP $key --> $parentKey ". self::$retTypes_[$parentKey] ."\n";
+                    break;
+                }
+                print "  @@@@ NOT FOUND $parentKey\n";
+                $cls = get_parent_class($cls);
+            }
+        }
+        return self::$retTypes_[$key];
+    }
+
+
+    static
+    function getStaticMethodRetType($cls, $methodName)
+    {
+        return self::getMethodRetType('::', $cls, $methodName);
+    }
+
+
+    static
+    function getInstanceMethodRetType($cls, $methodName)
+    {
+        return self::getMethodRetType('->', $cls, $methodName);
+    }
+
+
+    static
+    function setMethodRetType($sep, $castTo, $methodNames)
+    {
+        if (!is_array($methodNames)) {
+            $methodNames = explode(' ', $methodNames);
+        }
+        $cls = get_called_class();
+        foreach ($methodNames as $methodName) {
+            $key = "$cls$sep$methodName";
+            self::$retTypes_[$key] = $castTo;
+            print '    >>>> '. self::$retTypes_[$key]. " $key()\n";
+        }
+    }
+
+
+    static
+    function setStaticMethodRetType($castTo, $methodNames)
+    {
+        self::setMethodRetType('::', $castTo, $methodNames);
+    }
+
+
+    static
+    function setInstanceMethodRetType($castTo, $methodNames)
+    {
+        self::setMethodRetType('->', $castTo, $methodNames);
     }
 
 
@@ -142,5 +218,6 @@ class Object {
         return $ret;
     }
 }
+Object::setInstanceMethodRetType('bool', 'equals isOfType');
 
 ?>

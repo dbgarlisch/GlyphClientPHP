@@ -42,7 +42,7 @@ function main()
 }
 
 
-function runCommands($glf)
+function runCommands_Application($glf)
 {
     print "Application getVersion = " . pw\Application::getVersion() ."\n";
     print "Application getCAESolverNames = " . pw\Application::getCAESolverNames() ."\n";
@@ -51,20 +51,30 @@ function runCommands($glf)
     print "Application getCAESolver = " . pw\Application::getCAESolver() ."\n";
     print "Application undo = " . pw\Application::undo() ."\n";
     print "Application getCAESolver = " . pw\Application::getCAESolver() ."\n";
+    print "Application getCAESolverDimension = " . pw\Application::getCAESolverDimension() ."\n";
     print "\n";
+}
 
+
+function runCommands_Database($glf)
+{
     print "Database getCount = " . pw\Database::getCount() ."\n";
     print "Database getExtents = " . pw\Database::getExtents() ."\n";
     print "\n";
+}
+
+
+function runCommands($glf)
+{
+    //runCommands_Application($glf);
+    //runCommands_Database($glf);
 
     print "Grid getCount = " . pw\Grid::getCount() ."\n";
-    print "Grid getAll -type pw::Block = ". pw\Grid::getAll('-type pw::Block') ."\n";
-    print "Grid getAll -type pw::Domain = ". pw\Grid::getAll('-type pw::Domain') ."\n";
-    print "Grid getAll -type pw::Connector = ". pw\Grid::getAll('-type pw::Connector') ."\n";
-    print "Grid getAll = " . ($ents = pw\Grid::getAll()) ."\n";
-    print "\n";
-
-    foreach ($glf->doCast("pwent[]", $ents) as $ent) {
+    //print "Grid getAll -type pw::Block = ". pw\Grid::getAll('-type pw::Block') ."\n";
+    //print "Grid getAll -type pw::Domain = ". pw\Grid::getAll('-type pw::Domain') ."\n";
+    //print "Grid getAll -type pw::Connector = ". pw\Grid::getAll('-type pw::Connector') ."\n";
+    //print "\n";
+    foreach (pw\Grid::getAll() as $ent) {
         print "\n---------------------------------------------------\n";
         print "$ent equals $ent = " . $ent->equals($ent) ."\n";
         print "$ent getType = " . $ent->getType() ."\n";
@@ -72,11 +82,12 @@ function runCommands($glf)
         print "$ent getname = " . $ent->getName() ."\n";
         print "$ent getColor = " . $ent->getColor() ."\n";
         print "$ent getLayer = " . $ent->getLayer() ."\n";
-        print "$ent getExtents = " . ($xts = $ent->getExtents()) ."\n";
-        $xts = $glf->doCast('vec3[]', $xts);
-        var_dump($xts);
+        print "$ent getExtents =\n";
+        var_dump($ent->getExtents());
         print "$ent getTimeStamp = " . $ent->getTimeStamp() ."\n";
-        print "$ent getGroups = {" . $ent->getGroups() ."}\n";
+        print "$ent getGroups =\n";
+        var_dump($ent->getGroups());
+
         $attrs = array('ColorMode', 'SecondaryColor', 'SecondaryColorMode',
             'PointMode', 'FillMode', 'LineMode', 'IsolineCount',
             'TriangleDensity', 'LineDensity', 'LineWidth');
@@ -88,13 +99,12 @@ function runCommands($glf)
         print "$ent getSourceCalculationMethod = " . $ent->getSourceCalculationMethod() ."\n";
         print "$ent getPointCount = " . ($ptCnt = $ent->getPointCount()) ."\n";
         for ($ndx = 1; $ndx <= $ptCnt; ++$ndx) {
-            print "  $ent getXYZ $ndx = {" . ($xyz = $ent->getXYZ($ndx)) ."}\n";
-            $xyz = $glf->doCast('vec3', $xyz);
-            var_dump($xyz);
+            print "  $ent getXYZ $ndx =\n";
+            var_dump($ent->getXYZ($ndx));
         }
-        //print "$ent closestCoordinate = " . $ent->closestCoordinate() ."\n";
-        //print "$ent getAutomaticBoundaryCondition = " . $ent->getAutomaticBoundaryCondition() ."\n";
-        //print "$ent getRegisterBoundaryConditions = " . $ent->getRegisterBoundaryConditions() ."\n";
+        print "$ent closestCoordinate =\n";
+        var_dump($ent->closestCoordinate('{0 0 0}'));
+        print "\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"; break;
         print "$ent getVolumeCondition = " . $ent->getVolumeCondition() ."\n";
         print "$ent getDatabaseEntities = " . $ent->getDatabaseEntities() ."\n";
         print "$ent getExcludedSources = " . $ent->getExcludedSources() ."\n";
@@ -115,13 +125,20 @@ function runCommands($glf)
             print "$ent getAverageSpacing = " . $ent->getAverageSpacing() ."\n";
             $node = $glf->doCast("pwent", $ent->getNode('Begin'));
             print "$ent getNode Begin = $node\n";
-            $xyz = $node->getXYZ();
-            print "$node getXYZ = {$xyz}\n";
-            $xyz = $glf->doCast('vec3', $xyz);
-            var_dump($xyz);
+            print "$node getXYZ =\n";
+            var_dump($node->getXYZ());
+            print "$node getPointCount =". $node->getPointCount() ."\n";
+            print "$node getDimensions =\n";
+            var_dump($node->getDimensions());
+            print "$node getPoint =\n";
+            var_dump($node->getPoint());
+            print "$node getConnectors =\n";
+            var_dump($node->getConnectors());
             print "\npw\Connector::getAdjacentConnectors($glf, $ent) = ". pw\Connector::getAdjacentConnectors($glf, $ent) ."\n";
         }
-        if (!$ent->isOfType('pw::Block')) {
+        else if (!$ent->isOfType('pw::Block')) {
+            print "$ent getAutomaticBoundaryCondition = " . $ent->getAutomaticBoundaryCondition() ."\n";
+            print "$ent getRegisterBoundaryConditions = " . $ent->getRegisterBoundaryConditions() ."\n";
             print "$ent getDefaultProjectDirection = " . $ent->getDefaultProjectDirection() ."\n";
         }
         break;
@@ -134,11 +151,18 @@ function runCommands($glf)
     print "GridEntity::getByName('dom-2') = " . pw\GridEntity::getByName('dom-2') ."\n";
     print "\n";
 
+    print "\nCASTING\n";
     var_dump($glf->doCast('vec3', '1.5 2.6 3.7'));
     var_dump($glf->doCast('vec2', '1.2 2.8'));
     var_dump($glf->doCast('uv', '0.55 0.77'));
     var_dump($glf->doCast('idx3', '1 2 3'));
     var_dump($glf->doCast('idx2', '1 2'));
+    $vals = array('1', 'yes', 'true', true, 1, '0', 'no', 'FAlse', false, 0, 'xxx');
+    foreach ($vals as $v) {
+        print "(bool)$v == ". ($glf->doCast('bool', $v) ? 'true' : 'false') ."\n";
+    }
+
+    print "\nTCL IMPLODE\n";
     var_dump(pw\GlyphClient::tclImplode(array('word', 'multi word', 'word2')));
 }
 

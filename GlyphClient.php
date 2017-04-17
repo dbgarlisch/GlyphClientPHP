@@ -135,7 +135,7 @@ class GlyphClient {
         if (!GlyphClient::getCastFunc($castTo, $castFunc)) {
             // could not find a callable cast function
             if (is_callable(__NAMESPACE__."\GlyphClient::unknownCast_", false, $castFunc)) {
-                $ret = call_user_func($castFunc, $client, $castTo, $payload, $isArray);
+                $ret = call_user_func($castFunc, $castTo, $payload, $isArray);
             }
         }
         elseif ($isArray) {
@@ -281,6 +281,7 @@ class GlyphClient {
     private static
     function unknownCast_($castTo, $payload, $isArray)
     {
+        $isArray = $isArray ? 'true' : 'false';
         print "   | unknownCast_(castTo=$castTo, payload=$payload, isArray=$isArray)\n";
         return null;
     }
@@ -293,7 +294,7 @@ class GlyphClient {
         if (null === $client) {
             $payload = null;
         }
-        elseif ('::pw::' !== substr($payload, 0, 6)) {
+        elseif (0 != strncmp('::pw::', $payload, 6)) {
             $payload = null;
         }
         else {
@@ -374,6 +375,80 @@ class GlyphClient {
 
 
     private static
+    function pointCast($client, $payload)
+    {
+        // expecting one of:
+        //  "float float float"
+        //  "float float ::pw::entity_N"
+        //  "float float int ::pw::entity_N"
+        $ret = explode(' ', $payload);
+        $cnt = count($ret);
+        if (3 > $cnt || 4 < $cnt || !is_numeric($ret[0]) ||
+                !is_numeric($ret[1])) {
+            $ret = null;
+        }
+        else if (4 == $cnt) {
+            //  "float float int ::pw::entity_N"
+            if (!is_integer($ret[2])) {
+                $ret = null;
+            }
+            else if (null === ($ret[3] = self::pwentCast($client, $ret[3]))) {
+                $ret = null;
+            }
+            else {
+                $ret[0] = floatval($ret[0]);
+                $ret[1] = floatval($ret[1]);
+                $ret[2] = intval($ret[2]);
+            }
+        }
+        else if (is_numeric($ret[2])) {
+            //  "float float float"
+            $ret[0] = floatval($ret[0]);
+            $ret[1] = floatval($ret[1]);
+            $ret[2] = floatval($ret[2]);
+        }
+        else if (null === ($ret[2] = self::pwentCast($client, $ret[2]))) {
+            $ret = null;
+        }
+        else {
+            //  "float float ::pw::entity_N"
+            $ret[0] = floatval($ret[0]);
+            $ret[1] = floatval($ret[1]);
+        }
+        return $ret;
+    }
+
+
+    private static
+    function coordCast($client, $payload)
+    {
+        // expecting "int[ int[ int]] ::pw::entity_N"
+        $ret = explode(' ', $payload);
+        $cnt = count($ret);
+        if (2 > $cnt || 4 < $cnt) {
+            $ret = null;
+        }
+        else {
+            --$cnt;
+            $ret[$cnt] = self::pwentCast($client, $ret[$cnt]);
+            if (null === $ret[$cnt]) {
+                $ret = null;
+            }
+            else {
+                for ($i = 0; $i < $cnt; ++$i) {
+                    if (!is_numeric($ret[$i])) {
+                        $ret = null;
+                        break;
+                    }
+                    $ret[$i] = intval($ret[$i]);
+                }
+            }
+        }
+        return $ret;
+    }
+
+
+    private static
     function strCast($client, $payload)
     {
         return strval($payload);
@@ -398,6 +473,15 @@ class GlyphClient {
     function doubleCast($client, $payload)
     {
         return doubleval($payload);
+    }
+
+
+    private static
+    function boolCast($client, $payload)
+    {
+        return is_string($payload)
+            ? filter_var(trim($payload), FILTER_VALIDATE_BOOLEAN)
+            : (bool)$payload;
     }
 
 
