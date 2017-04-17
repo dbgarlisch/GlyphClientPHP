@@ -38,7 +38,6 @@ class Object {
         // This is invoked anytime a string rep of the Object is needed.
         // When composing glyph commands, the auto command dispatching depends
         // on this to return the underlying glyph object function name.
-        //print "   #   ". __CLASS__ ."\__toString::glfObj_(". $this->glfObj_ .")\n";
         return $this->glfObj_;
     }
 
@@ -147,7 +146,6 @@ class Object {
     {
         $key = "$cls$sep$methodName";
         if (!array_key_exists($key, self::$retTypes_)) {
-            print "  @@@@ NOT FOUND $key\n";
             // assume rturn type not defined in parent classes
             self::$retTypes_[$key] = null;
             $cls = get_parent_class($cls);
@@ -157,10 +155,8 @@ class Object {
                     // store return type for $origKey so we don't have to
                     // search again
                     self::$retTypes_[$key] = self::$retTypes_[$parentKey];
-                    print "  @@@@ MAP $key --> $parentKey ". self::$retTypes_[$parentKey] ."\n";
                     break;
                 }
-                print "  @@@@ NOT FOUND $parentKey\n";
                 $cls = get_parent_class($cls);
             }
         }
@@ -192,7 +188,6 @@ class Object {
         foreach ($methodNames as $methodName) {
             $key = "$cls$sep$methodName";
             self::$retTypes_[$key] = $castTo;
-            print '    >>>> '. self::$retTypes_[$key]. " $key()\n";
         }
     }
 
