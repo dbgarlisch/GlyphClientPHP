@@ -1,7 +1,15 @@
+* {
+    margin: 0;
+    padding: 0;
+    font-family: verdana, helvetica, arial, sans-serif;
+    font-size: 10pt;
+    color: #333322;
+    box-sizing: border-box;
+}
+
 #app {
     margin: 0.5em;
     padding: 0.2em;
-    max-width: 800px;
     vertical-align: top;
     border: 0px solid yellow;
 }
@@ -46,21 +54,44 @@
     padding: 0;
     border: 0px solid blue;
     cursor: crosshair;
+    max-width: 560px;
+    max-height: 560px;
 }
 
 .buttonBar {
-    padding: 0.3em 0.5em;
+    padding: 0.3em 0.5em 0.4em 0.5em;
     text-align: center;
+}
+
+#CLEAR_MSGS {
+    padding: 0.3em 0.8em;
+    margin-right: 3em;
+}
+
+#DEBUG_GLYPH {
+    width: 1.5em;
+    height: 1.5em;
+    position: relative;
+    top: 0.4em;
+}
+
+#DEBUG_GLYPH > label {
+    padding-left: 2em;
 }
 
 #status_bar {
     padding: 0.3em 0.5em;
-    height: 1.6em;
+    height: 2em;
     border: 1px solid #ccc;
 }
 
 #mouse_xy {
     float: right;
+}
+
+#mouse_x,
+#mouse_y {
+    font-weight: bold;
 }
 
 #log_panel {
@@ -69,11 +100,13 @@
 }
 
 #log {
+    font-family: consolas, monospace;
+    font-size: 0.85em;
     width: 100%;
     overflow: scroll;
-    height: 150px;
-    max-height: 150px;
+    min-height: 100px;
+    max-height: 250px;
     margin: 0;
-    padding: 0;
+    padding: 0.5em;
     border-top: 1px solid #ccc;
 }

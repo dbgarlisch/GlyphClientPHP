@@ -3,13 +3,42 @@
 //header('Expires: Fri, 30 Oct 1998 14:19:41 GMT');
 //header('Cache-Control: no-cache, must-revalidate');
 
+if (function_exists("date_default_timezone_set")) {
+  @date_default_timezone_set('America/Chicago');
+}
+
+function myErrorHandler($errno, $errstr, $errfile, $errline)
+{
+  $errnoStr = "$errno";
+  switch ($errno) {
+  case E_ERROR:   $errnoStr = 'E_ERROR'; break;
+  case E_WARNING: $errnoStr = 'E_WARNING'; break;
+  case E_NOTICE:  $errnoStr = 'E_NOTICE'; break;
+  default:        $errnoStr = "E_$errno"; break;
+  }
+  if ('' != $errnoStr) {
+    //$tmp['typ'] = $errnoStr;
+    //$tmp['msg'] = $errstr;
+    //$tmp['loc'] = "$errfile @ $errline";
+    //$GLOBALS["errHandler"][] = $tmp;
+    log("$errnoStr / $errstr / $errfile @ $errline");
+  }
+  /* Don't execute PHP internal error handler */
+  return true;
+}
+set_error_handler("myErrorHandler");
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
+
+
 global $PHP_SELF;
 if (!$PHP_SELF) {
     $PHP_SELF    = $_SERVER['PHP_SELF'];
 }
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="keywords" content="" />
@@ -28,8 +57,10 @@ if (!$PHP_SELF) {
           <option value='square'>Square</option>
           <option value='circle'>Circle</option>
           <option value='triangle'>Triangle</option>
+          <option value='cube'>Cube</option>
         </select></li>
         <li>View <select id='SET_VIEW' class='evtChange'>
+          <option value='iso'>Isometric</option>
           <option value='+X'>+X</option>
           <option value='-X'>-X</option>
           <option value='+Y'>+Y</option>
@@ -41,9 +72,6 @@ if (!$PHP_SELF) {
         <li id='GET_VERSION' class='evtClick'>Get Pointwise Version</li>
         <li id='IMAGE_FORMATS' class='evtClick'>Get Image Formats</li>
         <li id='REFRESH' class='evtClick'>Refresh</li>
-        <!--li id='SET_VIEW:+X' class='evtClick'>View +X</li>
-        <li id='SET_VIEW:+Y' class='evtClick'>View +Y</li>
-        <li id='SET_VIEW:+Z' class='evtClick'>View +Z</li-->
     </ul>
     <div id='display_panel'>
         <img id='DISPLAY' src='display.png' class='evtClick evtMouseMove evtMouseOut' />
@@ -55,6 +83,7 @@ if (!$PHP_SELF) {
         <pre id='log'></pre>
         <div class='buttonBar'>
             <button id='CLEAR_MSGS' class='evtClick'>Clear Messages</button>
+            <input type='checkbox' id='DEBUG_GLYPH'><label> Debug Glyph Client</label>
         </div>
     </div>
 </div>
@@ -107,14 +136,8 @@ $(document).ready(function(){
 
     // init widget status
     $('#DISPLAY').mouseout();
-
-    // update display
-    $('#REFRESH').click();
-
-    //$('.evtClick').css( 'border', '1px dotted green' );
-    //$('.evtClick').css( 'padding', '0.2em 0.4em' );
-    //$('.evtClick').css( 'margin', '0.2em 0.4em' );
-
+    $('#SHAPE').change();
+    $('#SET_VIEW').change();
 });
 
 
@@ -123,8 +146,9 @@ function makeEvent(id, domEvt) {
     // handle "id:subId" construct
     idToks = id.split(':');
     evt = {
-        "type":  domEvt.type,
-        "id":    idToks.shift() // first component is always id
+        'type':         domEvt.type,
+        'id':           idToks.shift(), // first component is always id
+        'debugGlyph':   ($('#DEBUG_GLYPH').prop('checked') ? 1 : 0)
     }
     // if any toks remaining, set subId.
     if (idToks.length != 0) {
@@ -194,7 +218,6 @@ function $_click(evt) {
 
 function SHAPE_change(evt) {
     //log(inFunction() + ' evt=' + JSON.stringify(evt));
-    //evt.optSelected = $('#SHAPE option:selected').text();
     data = sendCmd(evt);
     return true; // stop dispatch
 }
@@ -202,7 +225,6 @@ function SHAPE_change(evt) {
 
 function SET_VIEW_change(evt) {
     //log(inFunction() + ' evt=' + JSON.stringify(evt));
-    evt.optSelected = $('#SET_VIEW option:selected').text();
     data = sendCmd(evt);
     return true; // stop dispatch
 }
@@ -238,8 +260,11 @@ function sendCmd(cmd) {
         'event.php', cmd
     )
     .done(function(data, stat, jqXHR) {
-        //log('DONE data=' + data);
         sendCmdData = JSON.parse(data);
+        //log("DONE ret=" + sendCmdData['ret']);
+        sendCmdData['glyph'].forEach(function(msg){
+            log('g> ' + msg);
+        });
         checkDisplay(sendCmdData);
     })
     .fail(function(jqXHR, stat, errorThrown) {
@@ -261,9 +286,7 @@ function checkDisplay(data) {
     // Should probably make this a timer and delay the img update
     //log(inFunction() + ' BEFORE data=' + JSON.stringify(data) + ' prevMtime(' + prevMtime + ' != ' + data.mtime + ')data.mtime');
     if (prevMtime != data.mtime) {
-        $('#DISPLAY').attr({
-            src: "display.png?" + data.mtime
-        });
+        $('#DISPLAY').attr('src', 'display.png?ts=' + data.mtime);
         prevMtime = data.mtime;
     }
     //log(inFunction() + ' AFTER data=' + JSON.stringify(data) + ' prevMtime(' + prevMtime + ' != ' + data.mtime + ')data.mtime');
