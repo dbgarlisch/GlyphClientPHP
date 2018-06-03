@@ -8,6 +8,7 @@ class GlyphClient {
     private $auth_failed_;
     private $socket_;
     private $errors_;
+    private $log_ = array();
 
 
     function __construct() {
@@ -108,6 +109,11 @@ class GlyphClient {
     }
 
 
+    function isDebug() {
+        return $this->debug_;
+    }
+
+
     function is_busy() {
         $this->in(__METHOD__, func_get_args());
         return $this->busy_;
@@ -145,23 +151,38 @@ class GlyphClient {
             $ret = call_user_func($castFunc, $this, $payload);
         }
         if (null === $ret) {
-            throw new \Exception("Invalid cast $castTo($payload)");
+            if ($isArray) {
+                $castTo .= '[]';
+            }
+            throw new \Exception("Invalid cast $castTo($payload) using $castFunc");
         }
         return $ret;
     }
 
 
-    function isDebug()
+    function log($msg)
     {
-        return $this->debug_;
+        $this->log_[] = $msg;
     }
 
 
-    function debug($msg, $newline=true)
+    function debug($msg)
     {
         if ($this->debug_) {
-            print '   | ' . $msg . ($newline ? "\n" : "");
+            $this->log($msg);
         }
+    }
+
+
+    function hasLog()
+    {
+        return 0 < count($this->log_);
+    }
+
+
+    function getLog()
+    {
+        return $this->log_;
     }
 
 
@@ -282,7 +303,7 @@ class GlyphClient {
     function unknownCast_($castTo, $payload, $isArray)
     {
         $isArray = $isArray ? 'true' : 'false';
-        print "   | unknownCast_(castTo=$castTo, payload=$payload, isArray=$isArray)\n";
+        $this->log_[] = "   | unknownCast_(castTo=$castTo, payload=$payload, isArray=$isArray)\n";
         return null;
     }
 
@@ -500,10 +521,13 @@ class GlyphClient {
 
 
     private
-    function pushError($msg)
+    function pushError($msg, $logThisError = true)
     {
         if (0 < strlen($msg)) {
             $this->errors_[] = $msg;
+            if ($logThisError) {
+                $this->log('ERROR ' . $msg);
+            }
         }
     }
 

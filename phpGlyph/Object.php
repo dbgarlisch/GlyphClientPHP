@@ -72,7 +72,7 @@ class Object {
             return ' '. GlyphClient::tclImplode($args);
         }
         // Return single arg without modification. Caller is responsible to make
-        // the arg Tcl compliant. Multi word values must be // enclosed in {}.
+        // the arg Tcl compliant. Multi word values must be enclosed in {}.
         // For example, "-flag {multi word value}"
         return ' '. trim($args[0]);
     }
@@ -93,7 +93,7 @@ class Object {
 
         // exec glyph object command:
         //   "$funcName[ arg ...]"
-        return $this->cmd("$funcName". Object::argsToStr($args),
+        return $this->cmd("$funcName". self::argsToStr($args),
             self::getInstanceMethodRetType(get_called_class(), $funcName));
     }
 
@@ -135,7 +135,7 @@ class Object {
             // map PHP class to glyph object type
             //   Pointwise\CLASS --> pw::CLASS
             return $glf->cmd('pw::'. substr($cls, 10).
-                " $funcName". Object::argsToStr($args), $castTo);
+                " $funcName". self::argsToStr($args), $castTo);
         }
         throw new \Exception("Unexpected class '$cls'");
     }
