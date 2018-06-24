@@ -299,7 +299,7 @@ class GlyphClient {
     }
 
 
-    private static
+    private
     function unknownCast_($castTo, $payload, $isArray)
     {
         $isArray = $isArray ? 'true' : 'false';
@@ -466,6 +466,13 @@ class GlyphClient {
             }
         }
         return $ret;
+    }
+
+
+    private static
+    function stringCast($client, $payload)
+    {
+        return strval($payload);
     }
 
 
